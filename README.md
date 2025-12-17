@@ -12,14 +12,25 @@ Moon world in Gazebo (Ignition/Fortress) with a rover, packaged as a Docker-firs
 
 ### 1) Install Docker (Ubuntu)
 
+Please follow the official Docker installation guide for Ubuntu:
+
+https://docs.docker.com/engine/install/ubuntu/
+
+Make sure that after installation:
+- Docker is running
+- Your user is added to the `docker` group
+
 ```bash
-sudo apt update
-sudo apt install -y docker.io docker-compose-plugin git
-sudo systemctl enable --now docker
 sudo usermod -aG docker $USER
 ```
 
 Log out / log in (required for the docker group change).
+
+Verify Docker :
+
+```bash
+docker run hello-world
+```
 
 ### 2) Clone the repository
 
