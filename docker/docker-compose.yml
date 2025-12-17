@@ -1,0 +1,23 @@
+services:
+  astromoon:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: astromoon
+    network_mode: host
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XDG_RUNTIME_DIR=/tmp/runtime-root
+      - LIBGL_ALWAYS_INDIRECT=0
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Monte le workspace local dans le container pour itérer vite
+      - ..:/astromoon_ws:rw
+    stdin_open: true
+    tty: true
