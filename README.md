@@ -6,9 +6,9 @@ Moon world in Gazebo (Ignition/Fortress) with a rover, packaged as a Docker-firs
 
 ### 0) Requirements
 
-- Linux desktop with an X11 session (Ubuntu recommended)
+- Linux desktop (Ubuntu recommended)
 - Docker + Docker Compose plugin
-- (Optional but recommended) GPU acceleration for Docker to avoid llvmpipe software rendering
+
 
 ### 1) Install Docker (Ubuntu)
 
@@ -99,5 +99,4 @@ docker exec -it astromoon bash
 ## Notes
 
 - This repository is a ROS 2 workspace.
-- Do not commit build/, install/, or log/ directories.
 - Large mesh assets are managed with Git LFS.# AstroMoon (ROS2 + Gazebo)
