@@ -34,7 +34,10 @@ Your user should be allowed to run Docker without sudo (recommended).
 From any directory on your machine, run:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/Walter8White/astromoon/main/setup.sh -o setup.sh
+chmod +x setup.sh
 ./setup.sh
+
 ```
 
 What this does:
