@@ -78,7 +78,7 @@ This:
 ## Run the simulation
 
 ```bash
-ros2 launch astromoon_core lunar_world.launch.py
+ros2 launch astromoon_core moon_world.launch.py
 ```
 
 Gazebo should open on your Linux desktop.
