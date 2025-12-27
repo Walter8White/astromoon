@@ -6,6 +6,8 @@ services:
       dockerfile: docker/Dockerfile
     container_name: astromoon
     network_mode: host
+    command: ["bash", "-lc", "sleep infinity"]
+
 
     # GPU accel for Intel/AMD on Linux (Mesa/DRI)
     devices:
