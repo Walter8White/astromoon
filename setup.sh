@@ -1,59 +1,80 @@
+# setup.sh
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$REPO_DIR"
+REPO_URL="https://github.com/Walter8White/astromoon.git"
+WS_NAME="astromoon"
+COMPOSE_FILE="docker/docker-compose.yml"
+CONTAINER_NAME="astromoon"
 
-echo "AstroMoon setup (Docker MVP)"
+echo ""
+echo "== AstroMoon setup (Linux) =="
 
-# Check Docker presence
+# 1) Prereqs
+if ! command -v git >/dev/null 2>&1; then
+  echo "ERROR: git is not installed. Install it first: sudo apt-get update && sudo apt-get install -y git"
+  exit 1
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker is not installed."
-  echo "Ubuntu: sudo apt update && sudo apt install -y docker.io docker-compose-plugin"
+  echo "ERROR: docker is not installed. Install Docker Engine + Docker Compose plugin."
   exit 1
 fi
 
-# Check Docker daemon access
 if ! docker info >/dev/null 2>&1; then
-  echo "Docker daemon is not reachable."
-  echo "Try: sudo systemctl enable --now docker"
-  echo "Then (recommended): sudo usermod -aG docker \$USER  (logout/login required)"
+  echo "ERROR: Docker daemon not reachable."
+  echo "Fix: start docker service, or add your user to the docker group, or run with sudo."
   exit 1
 fi
 
-# Optional GPU enablement (Intel/AMD DRM). Prevents llvmpipe software rendering.
-if [ -d /dev/dri ]; then
-  NEED_GROUPS=0
-  id -nG "$USER" | grep -qw video  || NEED_GROUPS=1
-  id -nG "$USER" | grep -qw render || NEED_GROUPS=1
-
-  if [ "$NEED_GROUPS" -eq 1 ]; then
-    echo ""
-    echo "Optional (recommended): enable GPU acceleration for Docker (prevents llvmpipe / major lag)."
-    read -r -p "Add $USER to 'video,render' groups? (y/N) " ans
-    if [[ "$ans" =~ ^[Yy]$ ]]; then
-      sudo usermod -aG video,render "$USER"
-      echo ""
-      echo "Done. Logout/login (or reboot) is required. Then re-run: ./setup.sh"
-      exit 0
-    else
-      echo "Continuing without GPU acceleration (it will work but may be slow)."
-    fi
-  fi
+if ! docker compose version >/dev/null 2>&1; then
+  echo "ERROR: docker compose is not available (Compose V2 plugin)."
+  echo "Fix: install the docker compose plugin."
+  exit 1
 fi
 
-# Allow Docker containers to use X11 (Gazebo GUI)
-xhost +local:docker >/dev/null 2>&1 || true
+# 2) Clone repo
+if [ ! -d "${WS_NAME}" ]; then
+  echo "Cloning repo into ./${WS_NAME} ..."
+  git clone "${REPO_URL}" "${WS_NAME}"
+else
+  echo "Repo folder ./${WS_NAME} already exists. Skipping clone."
+fi
+
+cd "${WS_NAME}"
+
+# 3) X11 access (Gazebo GUI on host)
+if command -v xhost >/dev/null 2>&1; then
+  # Allow local root (container runs as root by default)
+  xhost +local:root >/dev/null 2>&1 || true
+else
+  echo "WARNING: xhost not found. If Gazebo GUI does not appear, install it: sudo apt-get install -y x11-xserver-utils"
+fi
+
+# 4) Build + start container
+echo "Building and starting container..."
+docker compose -f "${COMPOSE_FILE}" up -d --build
 
 echo ""
-echo "[1/2] Building Docker image..."
-docker compose -f docker/docker-compose.yml build
-
+echo "== Ready =="
+echo "Container name: ${CONTAINER_NAME}"
 echo ""
-echo "[2/2] Starting container..."
-docker compose -f docker/docker-compose.yml up -d
-
-echo ""
-echo "Setup complete."
 echo "Next:"
-echo "  ./launch.sh"
+echo "  docker exec -it ${CONTAINER_NAME} bash"
+echo ""
+echo "Inside the container (first time):"
+echo "  cd /astromoon_ws"
+echo "  rosdep install --from-paths src --ignore-src -r -y"
+echo "  colcon build --symlink-install"
+echo "  source install/setup.bash"
+echo "  ros2 launch astromoon_core lunar_world.launch.py"
+echo ""
+echo "Inside the container (next times):"
+echo "  cd /astromoon_ws"
+echo "  colcon build --symlink-install"
+echo "  source install/setup.bash"
+echo "  ros2 launch astromoon_core lunar_world.launch.py"
+echo ""
+echo "Stop everything (host):"
+echo "  docker compose -f ${WS_NAME}/${COMPOSE_FILE} down"
+echo ""

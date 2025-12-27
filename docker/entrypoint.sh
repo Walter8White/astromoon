@@ -1,9 +1,10 @@
+# docker/entrypoint.sh
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 source /opt/ros/humble/setup.bash
 
-# Source ton workspace s’il est build
+# If user already built the workspace, make it available automatically
 if [ -f /astromoon_ws/install/setup.bash ]; then
   source /astromoon_ws/install/setup.bash
 fi

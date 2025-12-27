@@ -1,51 +1,50 @@
+# docker/Dockerfile
 FROM osrf/ros:humble-desktop
-
 
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
 
-# Basics
+# Basics + build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
+    curl \
+    ca-certificates \
+    build-essential \
+    cmake \
+    pkg-config \
     python3-pip \
-    python3-colcon-common-extensions \
     python3-rosdep \
+    python3-colcon-common-extensions \
     python3-vcstool \
     x11-apps \
-    && rm -rf /var/lib/apt/lists/*
-
-# Gazebo Fortress + ROS<->Gazebo bridge (nom du package dépend des dépôts)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ignition-fortress \
-    && (apt-get install -y --no-install-recommends ros-humble-ros-gz || true) \
-    && (apt-get install -y --no-install-recommends ros-humble-ros-ign || true) \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
+    x11-xserver-utils \
     mesa-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# rosdep init (ok si déjà initialisé)
+# Gazebo Fortress
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ignition-fortress \
+    && rm -rf /var/lib/apt/lists/*
+
+# ROS <-> Gazebo bridge (try both names depending on apt repos availability)
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends ros-humble-ros-gz || true) && \
+    (apt-get install -y --no-install-recommends ros-humble-ros-ign || true) && \
+    rm -rf /var/lib/apt/lists/*
+
+# rosdep init/update (safe in container build)
 RUN rosdep init || true
 RUN rosdep update
 
-# Workspace
+# Workspace path (code will be bind-mounted here by docker-compose)
 ENV WS=/astromoon_ws
 WORKDIR ${WS}
 
-# Copie du workspace (on suppose que ton repo contient astromoon_ws/*)
-# Si ton repo EST le workspace, adapte (on ajustera si besoin)
-COPY . ${WS}
-
-# Déps + build (ignore les sources non résolues si jamais)
-RUN source /opt/ros/humble/setup.bash && \
-    apt-get update && \
-    rosdep install --from-paths src --ignore-src -r -y || true && \
-    colcon build --symlink-install
-
+# Shell convenience: source ROS by default; source workspace if built
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc && \
-    echo "if [ -f /astromoon_ws/install/setup.bash ]; then source /astromoon_ws/install/setup.bash; fi" >> /etc/bash.bashrc && \
+    echo 'if [ -f /astromoon_ws/install/setup.bash ]; then source /astromoon_ws/install/setup.bash; fi' >> /etc/bash.bashrc && \
     echo "cd /astromoon_ws" >> /etc/bash.bashrc
+
 # Entrypoint
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

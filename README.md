@@ -1,113 +1,132 @@
-# AstroMoon (ROS 2 + Gazebo)
+# AstroMoon
 
-Moon world in Gazebo (Ignition/Fortress) with a rover, packaged as a Docker-first ROS 2 workspace.
+AstroMoon is a ROS 2 + Gazebo simulation environment packaged with Docker for a robust and reproducible setup on Linux.
 
-## Quickstart (Linux)
+The goal is simple:
+- one command to set up the environment
+- then build and run the simulation inside a container
 
-### 0) Requirements
+This project is **Linux-only** (tested on Ubuntu).
 
-- Linux desktop (Ubuntu recommended)
-- Docker + Docker Compose plugin
+---
 
+## Prerequisites (host machine)
 
-### 1) Install Docker (Ubuntu)
+You must have:
 
-Please follow the official Docker installation guide for Ubuntu:
+- Git
+- Docker Engine
+- Docker Compose (v2 plugin)
 
-https://docs.docker.com/engine/install/ubuntu/
-
-Make sure that after installation:
-- Docker is running
-- Your user is added to the `docker` group
-
+Verify:
 ```bash
-sudo usermod -aG docker $USER
+git --version
+docker --version
+docker compose version
 ```
 
-Log out / log in (required for the docker group change).
+Your user should be allowed to run Docker without sudo (recommended).
 
-Verify Docker :
+---
 
-```bash
-docker run hello-world
-```
+## Setup (one command)
 
-### 2) Clone the repository
-
-```bash
-git clone git@github.com:Walter8White/astromoon.git
-cd astromoon
-```
-
-### 3) Run setup (build + run the container)
-
-```bash
-chmod +x setup.sh launch.sh
-./setup.sh
-```
-
-What setup.sh does:
-- checks Docker availability
-- optionally enables GPU acceleration (video/render groups)
-- builds the Docker image
-- starts the container
-
-If you accepted the GPU option, you must log out / log in (or reboot) and then run:
+From any directory on your machine, run:
 
 ```bash
 ./setup.sh
 ```
 
-### 4) Launch the simulation
+What this does:
+- clones the AstroMoon repository
+- builds a Docker image with ROS 2 + Gazebo
+- starts a container in the background
+- configures X11 so Gazebo can open a GUI
 
-```bash
-./launch.sh
-```
+At the end, the container is **running**, but you are still on your host machine.
 
-## Troubleshooting
+---
 
-### Gazebo window does not show up (X11 permissions)
-
-```bash
-xhost +local:docker
-```
-
-Then retry:
-
-```bash
-./launch.sh
-```
-
-### Very slow rendering / massive lag (llvmpipe)
-
-Enable GPU access for Docker (Intel / AMD):
-
-```bash
-sudo usermod -aG video,render $USER
-```
-
-Log out / log in (or reboot), then:
-
-```bash
-./setup.sh
-./launch.sh
-```
-
-## Container management
-
-Stop the container:
-
-```bash
-docker compose -f docker/docker-compose.yml down
-```
-
-Enter an interactive shell in the running container:
+## Enter the container
 
 ```bash
 docker exec -it astromoon bash
 ```
 
+You are now **inside the Docker container**.
+
+---
+
+## First build (inside the container, once)
+
+```bash
+cd /astromoon_ws
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+source install/setup.bash
+```
+
+This:
+- installs ROS dependencies declared in `package.xml`
+- builds the workspace
+
+---
+
+## Run the simulation
+
+```bash
+ros2 launch astromoon_core lunar_world.launch.py
+```
+
+Gazebo should open on your Linux desktop.
+
+---
+
+## Next runs
+
+On later runs, you only need:
+
+```bash
+docker exec -it astromoon bash
+cd /astromoon_ws
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch astromoon_core lunar_world.launch.py
+```
+
+---
+
+## Stop the environment (host machine)
+
+```bash
+docker compose -f astromoon/docker/docker-compose.yml down
+```
+
+---
+
 ## Notes
 
-- This repository is a ROS 2 workspace.
-- Large mesh assets are managed with Git LFS.# AstroMoon (ROS2 + Gazebo)
+- This setup is intended for **Linux desktop** systems.
+- GPU acceleration is enabled for Intel/AMD via `/dev/dri`.
+- NVIDIA GPUs require additional configuration (not included).
+- The Docker image contains only the environment; your code is mounted live.
+
+---
+
+## Troubleshooting
+
+If Gazebo does not appear:
+```bash
+xhost +local:root
+```
+
+If dependencies change:
+```bash
+rosdep install --from-paths src --ignore-src -r -y
+```
+
+---
+
+## License
+
+MIT
