@@ -39,6 +39,18 @@ def generate_launch_description():
     # Lance Gazebo
     gz = ExecuteProcess(cmd=['ign', 'gazebo', world, '-v', '4'], output='screen')
 
+    #gz-ros bridge for cmd_vel
+    bridge_cmd_vel = Node(
+    package='ros_gz_bridge',
+    executable='parameter_bridge',
+    arguments=[
+        '/model/rover/cmd_vel@geometry_msgs/msg/Twist@ignition.msgs.Twist',
+    ],
+    output='screen',
+    ros_arguments=['-r', '/model/rover/cmd_vel:=/cmd_vel'],
+    )
+
+
     # Spawner rover
     spawn = TimerAction(period=2.0, actions=[
         Node(
@@ -49,6 +61,6 @@ def generate_launch_description():
         )
     ])
 
-    return LaunchDescription([env_ign, env_gz, gz, spawn])
+    return LaunchDescription([env_ign, env_gz, gz, spawn, bridge_cmd_vel])
 
 
