@@ -1,25 +1,24 @@
 <?xml version="1.0"?>
 <robot name="rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
- <!-- géométrie -->
- <xacro:property name="bx" value="0.6"/> 
- <xacro:property name="by" value="0.4"/>
- <xacro:property name="bz" value="0.2"/>
- <xacro:property name="rw" value="0.09"/>  <!-- rayon roue -->
- <xacro:property name="tw" value="0.05"/>  <!-- épaisseur roue -->
+  <!-- geometry -->
+  <xacro:property name="bx" value="0.6"/>
+  <xacro:property name="by" value="0.4"/>
+  <xacro:property name="bz" value="0.2"/>
+  <xacro:property name="rw" value="0.09"/>  <!-- wheel radius -->
+  <xacro:property name="tw" value="0.05"/>  <!-- wheel thickness -->
 
- <!-- placement fin -->
- <xacro:property name="gap_y"  value="0.01"/>           <!-- rapprocher la roue du flanc -->
- <xacro:property name="gap_x"  value="0.01"/>           <!-- reculer un poil l’axe dans X -->
- <xacro:property name="clear"  value="0.01"/>           <!-- garde entre haut roue et bas châssis -->
- <xacro:property name="axle_z" value="${rw}"/>          <!-- hauteur de l’axe -->
- <xacro:property name="wheel_x" value="${bx/2 - rw - gap_x}"/>
- <xacro:property name="wheel_y" value="${by/2 + tw/2 - gap_y}"/>
-
+  <!-- fine placement -->
+  <xacro:property name="gap_y"  value="0.01"/>
+  <xacro:property name="gap_x"  value="0.01"/>
+  <xacro:property name="clear"  value="0.01"/>
+  <xacro:property name="axle_z" value="${rw}"/>
+  <xacro:property name="wheel_x" value="${bx/2 - rw - gap_x}"/>
+  <xacro:property name="wheel_y" value="${by/2 + tw/2 - gap_y}"/>
 
   <!-- import -->
   <xacro:include filename="wheel.xacro"/>
 
-  <!-- châssis -->
+  <!-- chassis -->
   <link name="base_link">
     <visual>
       <origin xyz="0 0 ${axle_z + clear + bz/2}"/>
@@ -37,11 +36,34 @@
     </inertial>
   </link>
 
-  <!-- 4 roues -->
- <xacro:wheel name="wheel_fl" x="${ wheel_x}" y="${ wheel_y}"  z="${axle_z}" radius="${rw}" width="${tw}"/>
- <xacro:wheel name="wheel_fr" x="${ wheel_x}" y="${-wheel_y}" z="${axle_z}" radius="${rw}" width="${tw}"/>
- <xacro:wheel name="wheel_rl" x="${-wheel_x}" y="${ wheel_y}"  z="${axle_z}" radius="${rw}" width="${tw}"/>
- <xacro:wheel name="wheel_rr" x="${-wheel_x}" y="${-wheel_y}" z="${axle_z}" radius="${rw}" width="${tw}"/>
-  
+  <!-- 4 wheels -->
+  <xacro:wheel name="wheel_fl" x="${ wheel_x}" y="${ wheel_y}"  z="${axle_z}" radius="${rw}" width="${tw}"/>
+  <xacro:wheel name="wheel_fr" x="${ wheel_x}" y="${-wheel_y}" z="${axle_z}" radius="${rw}" width="${tw}"/>
+  <xacro:wheel name="wheel_rl" x="${-wheel_x}" y="${ wheel_y}"  z="${axle_z}" radius="${rw}" width="${tw}"/>
+  <xacro:wheel name="wheel_rr" x="${-wheel_x}" y="${-wheel_y}" z="${axle_z}" radius="${rw}" width="${tw}"/>
+
+  <!-- Ignition Fortress diff drive plugin -->
+  <gazebo>
+    <plugin
+      filename="libignition-gazebo-diff-drive-system.so"
+      name="ignition::gazebo::systems::DiffDrive">
+
+      <!-- left wheels -->
+      <left_joint>wheel_fl_joint</left_joint>
+      <left_joint>wheel_rl_joint</left_joint>
+
+      <!-- right wheels -->
+      <right_joint>wheel_fr_joint</right_joint>
+      <right_joint>wheel_rr_joint</right_joint>
+
+      <wheel_separation>${2*wheel_y}</wheel_separation>
+      <wheel_radius>${rw}</wheel_radius>
+
+      <!-- Gazebo Transport cmd_vel -->
+      <topic>/model/rover/cmd_vel</topic>
+    </plugin>
+  </gazebo>
+
 
 </robot>
+
