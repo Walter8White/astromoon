@@ -22,5 +22,9 @@
       <origin xyz="${x} ${y} ${z}"/>
       <axis xyz="0 1 0"/>
     </joint>
+    <gazebo reference="${name}">
+      <mu1>3.0</mu1>
+      <mu2>3.0</mu2>
+    </gazebo>
   </xacro:macro>
 </robot>
