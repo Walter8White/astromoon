@@ -50,6 +50,19 @@ def generate_launch_description():
     ros_arguments=['-r', '/model/rover/cmd_vel:=/cmd_vel'],
     )
 
+    #gr-ros bridge for odometry
+    bridge_odom = Node(
+    package='ros_gz_bridge',
+    executable='parameter_bridge',
+    name='bridge_odom',
+    output='screen',
+    arguments=[
+        '/model/rover/odometry@nav_msgs/msg/Odometry@ignition.msgs.Odometry',
+    ],
+    ros_arguments=['-r', '/model/rover/odometry:=/odom'],
+    )
+
+
 
     # Spawner rover
     spawn = TimerAction(period=2.0, actions=[
@@ -61,6 +74,6 @@ def generate_launch_description():
         )
     ])
 
-    return LaunchDescription([env_ign, env_gz, gz, spawn, bridge_cmd_vel])
+    return LaunchDescription([env_ign, env_gz, gz, spawn, bridge_cmd_vel, bridge_odom])
 
 
