@@ -24,6 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            "mission_manager = astromoon_missions.mission_manager:main",
+            "mission_referee = astromoon_missions.mission_referee:main",
         ],
     },
 )
