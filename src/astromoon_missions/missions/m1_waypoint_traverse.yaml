@@ -1,0 +1,24 @@
+mission_name: "m1_waypoint_traverse"
+time_limit_s: 300
+
+execution:
+  mode: "nav2"
+  action: "follow_waypoints"
+  loop: true           # renvoie la mission en boucle
+  loop_delay_s: 0.5    # petite pause entre boucles
+
+waypoints:
+  frame_id: "odom"
+  tolerance_xy_m: 0.25
+  points:
+    - id: "wp1"
+      xy_yaw: [1.5, 0.0, 0.0]
+    - id: "wp2"
+      xy_yaw: [2.5, 1.0, 1.57]
+    - id: "wp3"
+      xy_yaw: [1.5, -1.0, -1.57]
+
+home:
+  enabled: true
+  frame_id: "odom"
+  xy_yaw: [0.0, 0.0, 0.0]

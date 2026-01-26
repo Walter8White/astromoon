@@ -18,8 +18,7 @@ data_files = [
     (f'share/{package_name}', ['package.xml']),
 ]
 
-# Installe récursivement les assets (portable docker/host)
-# Ajoute/retire des dossiers ici selon ton repo
+
 for d in ['launch', 'worlds', 'urdf', 'models', 'meshes']:
     if Path(d).exists():
         data_files += package_files(d)
@@ -35,5 +34,9 @@ setup(
     maintainer_email='emilienghazal@gmail.com',
     description='astromoon rover',
     license='Apache-2.0',
-    entry_points={'console_scripts': []},
+    entry_points={
+    'console_scripts': [
+        'odom_tf_broadcaster = astromoon_core.odom_tf_broadcaster:main',
+    ],
+},
 )

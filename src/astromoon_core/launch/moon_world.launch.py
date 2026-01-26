@@ -3,6 +3,10 @@ from launch import LaunchDescription
 from launch.actions import ExecuteProcess, TimerAction, SetEnvironmentVariable
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 import os, xacro, tempfile
 
 def generate_launch_description():
@@ -62,6 +66,19 @@ def generate_launch_description():
     ros_arguments=['-r', '/model/rover/odometry:=/odom'],
     )
 
+    unpause = TimerAction(period=4.0, actions=[
+        ExecuteProcess(
+            cmd=[
+                'ign', 'service',
+                '-s', '/world/lunar_world/control',
+                '--reqtype', 'ignition.msgs.WorldControl',
+                '--reptype', 'ignition.msgs.Boolean',
+                '--timeout', '3000',
+                '--req', 'pause: false'
+            ],
+            output='screen'
+        )
+    ])
 
 
     # Spawner rover
@@ -74,6 +91,32 @@ def generate_launch_description():
         )
     ])
 
-    return LaunchDescription([env_ign, env_gz, gz, spawn, bridge_cmd_vel, bridge_odom])
+    rover_bringup = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("astromoon_core"),
+                "launch",
+                "rover_bringup.launch.py",
+            ])
+        ),
+        launch_arguments={"use_sim_time": "true"}.items(),
+    )
+
+    odom_tf = Node(
+        package="astromoon_core",
+        executable="odom_tf_broadcaster",
+        output="screen",
+        parameters=[
+            {"use_sim_time": True},
+            {"odom_topic": "/odom"},
+            {"odom_frame": "odom"},
+            {"base_frame": "base_link"},
+        ],  
+    )
+
+
+
+    return LaunchDescription([env_ign, env_gz, gz, unpause, spawn, bridge_cmd_vel, bridge_odom, rover_bringup, odom_tf])
+
 
 

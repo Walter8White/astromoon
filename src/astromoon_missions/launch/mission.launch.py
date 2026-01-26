@@ -42,7 +42,7 @@ def generate_launch_description():
     )
 
     # 3) Mission nodes
-    mission_manager = Node(
+    mission_manager =  Node(
         package="astromoon_missions",
         executable="mission_manager",
         name="mission_manager",
