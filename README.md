@@ -9,22 +9,21 @@ The goal is simple:
 
 This project is **Linux-only** (tested on Ubuntu).
 
----
-
 ## Project structure
 
 AstroMoon is organized as a ROS 2 workspace with multiple packages:
 
 - astromoon_core  
-  Robot description, Gazebo worlds, spawning and simulation bringup
+  Robot description, Gazebo worlds, spawning and simulation bringup  
+  (details: [README](src/astromoon_core/README.md))
 
 - astromoon_nav  
-  Navigation stack (Nav2) configuration and launch
+  Navigation stack (Nav2) configuration and launch  
+  (details: [README](src/astromoon_nav/README.md))
 
 - astromoon_missions  
-  Mission orchestration, mission logic, and evaluation
-
-Each package contains its own README with usage and design details.
+  Mission orchestration, mission logic, and evaluation  
+  (details: [README](src/astromoon_missions/README.md))
 
 ---
 
@@ -71,6 +70,15 @@ rosdep install --from-paths src --ignore-src -r -y
 colcon build
 source install/setup.bash
 ```
+
+---
+
+## Run the simulation / missions
+
+The recommended entry point is the mission launcher in the `astromoon_missions` package:
+
+- [astromoon_missions README](src/astromoon_missions/README.md)
+
 
 ---
 
