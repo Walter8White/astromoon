@@ -8,7 +8,7 @@ execution:
   loop_delay_s: 0.5    # small pause between loops
 
 waypoints:
-  frame_id: "odom"
+  frame_id: "map"
   tolerance_xy_m: 0.25
   points:
     - id: "wp1"
@@ -20,5 +20,5 @@ waypoints:
 
 home:
   enabled: true
-  frame_id: "odom"
+  frame_id: "map"
   xy_yaw: [0.0, 0.0, 0.0]

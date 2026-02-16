@@ -37,6 +37,7 @@ setup(
     entry_points={
     'console_scripts': [
         'odom_tf_broadcaster = astromoon_core.odom_tf_broadcaster:main',
+        'map_to_odom_broadcaster = astromoon_core.map_to_odom_broadcaster:main',
     ],
 },
 )

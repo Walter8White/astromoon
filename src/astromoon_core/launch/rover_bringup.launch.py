@@ -25,6 +25,7 @@ def generate_launch_description():
         parameters=[
             {"use_sim_time": use_sim_time},
             {"robot_description": robot_description},
+            {"frame_prefix": "rover/"},
         ],
     )
 
