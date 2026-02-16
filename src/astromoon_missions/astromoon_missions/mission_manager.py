@@ -13,7 +13,6 @@ from nav2_msgs.action._follow_waypoints import FollowWaypoints_Result
 from lifecycle_msgs.srv import GetState
 
 
-
 def yaw_to_quat(yaw: float):
     # z = sin(yaw/2), w = cos(yaw/2)
     import math
@@ -45,15 +44,27 @@ class MissionManager(Node):
 
         self.client = ActionClient(self, FollowWaypoints, "/follow_waypoints")
 
+        # --- logging state ---
+        self._logged_once = set()
+        self._last_wp_idx = None
+
         self._publish_event("MISSION_STARTED")
         self._publish_event(f"FOLLOW_WAYPOINTS_READY n={len(self.poses)} loop={self.loop}")
 
         self._wait_nav2_ready()
 
-    
+    def _log_once(self, key: str, level: str, msg: str):
+        if key in self._logged_once:
+            return
+        self._logged_once.add(key)
+        getattr(self.get_logger(), level)(msg)
+
     def _wait_nav2_ready(self):
-        # Check /waypoint_follower lifecycle state every 0.5s
-        self.get_logger().info("Waiting for /waypoint_follower to become ACTIVE...")
+        self._log_once(
+            "wait_nav2",
+            "info",
+            "Waiting for /waypoint_follower to become ACTIVE..."
+        )
         self._ready_timer = self.create_timer(0.5, self._check_waypoint_follower_state)
 
     def _check_waypoint_follower_state(self):
@@ -73,12 +84,14 @@ class MissionManager(Node):
 
         # ACTIVE == 3
         if resp.current_state.id == 3:
-            self.get_logger().info("Nav2 waypoint_follower is ACTIVE. Sending FollowWaypoints goal.")
+            self._log_once(
+                "nav2_ready",
+                "info",
+                "Nav2 waypoint_follower is ACTIVE. Sending FollowWaypoints goal."
+            )
             self._publish_event("NAV2_READY")
-            # stop timer
             self._ready_timer.cancel()
             self._send_goal()
-
 
     def _publish_event(self, text: str):
         msg = String()
@@ -103,6 +116,7 @@ class MissionManager(Node):
     def _make_pose(self, x, y, yaw, frame_id=None):
         ps = PoseStamped()
         ps.header.frame_id = frame_id if frame_id is not None else self.frame_id
+        ps.header.stamp = self.get_clock().now().to_msg()
         ps.pose.position.x = float(x)
         ps.pose.position.y = float(y)
         ps.pose.position.z = 0.0
@@ -120,22 +134,28 @@ class MissionManager(Node):
             return
 
         goal = FollowWaypoints.Goal()
-        # stamp is optional; Nav2 mostly uses frame_id + tf
         goal.poses = self.poses
 
         self._publish_event("FOLLOW_WAYPOINTS_GOAL_SENT")
-        self.get_logger().info(f"Sending FollowWaypoints with {len(self.poses)} poses")
+        self._log_once(
+            "send_goal",
+            "info",
+            f"Sending FollowWaypoints with {len(self.poses)} poses"
+        )
 
         send_future = self.client.send_goal_async(goal, feedback_callback=self._on_feedback)
         send_future.add_done_callback(self._on_goal_response)
 
     def _on_feedback(self, feedback_msg):
-        # feedback.current_waypoint is common
         try:
             idx = feedback_msg.feedback.current_waypoint
-            self._publish_event(f"FOLLOW_WAYPOINTS_FEEDBACK current_waypoint={idx}")
         except Exception:
-            pass
+            return
+
+        if idx != self._last_wp_idx:
+            self._last_wp_idx = idx
+            self.get_logger().info(f"Following waypoints: current_waypoint={idx}")
+            self._publish_event(f"FOLLOW_WAYPOINTS_FEEDBACK current_waypoint={idx}")
 
     def _on_goal_response(self, future):
         goal_handle = future.result()
@@ -151,24 +171,29 @@ class MissionManager(Node):
     def _on_result(self, future):
         res = future.result()
         status = res.status
-        result: FollowWaypoints_Result = res.result
+        result: FollowWaypoints_Result = res.result  # noqa: F841
 
-        self.get_logger().info(f"FollowWaypoints finished status={status}")
+        self._log_once(
+            f"result_{status}",
+            "info",
+            f"FollowWaypoints finished status={status}"
+        )
         self._publish_event(f"FOLLOW_WAYPOINTS_DONE status={status}")
 
-        # If looping, send again
         if self.loop:
+            self._log_once(
+                "looping",
+                "info",
+                f"Looping every {self.loop_delay_s}s"
+            )
             if self.loop_delay_s > 0.0:
-                self.get_logger().info(f"Looping after {self.loop_delay_s}s")
                 self.create_timer(self.loop_delay_s, self._loop_once)
             else:
                 self._send_goal()
         else:
-            # One-shot: let referee decide success/fail; manager can just idle
-            self.get_logger().info("Loop disabled: manager idle")
+            self._log_once("idle", "info", "Loop disabled: manager idle")
 
     def _loop_once(self):
-        # timer callback; send goal then cancel timer by doing nothing else
         self._send_goal()
 
 

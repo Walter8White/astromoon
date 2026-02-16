@@ -4,8 +4,8 @@ time_limit_s: 300
 execution:
   mode: "nav2"
   action: "follow_waypoints"
-  loop: true           # renvoie la mission en boucle
-  loop_delay_s: 0.5    # petite pause entre boucles
+  loop: true           # mission is looped
+  loop_delay_s: 0.5    # small pause between loops
 
 waypoints:
   frame_id: "odom"

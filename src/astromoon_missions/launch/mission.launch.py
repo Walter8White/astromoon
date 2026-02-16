@@ -83,7 +83,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             "mission",
-            default_value="m0_bootcamp",
+            default_value="m1_waypoint_traverse",
             description="Mission name (without .yaml). Example: m0_bootcamp",
         ),
         DeclareLaunchArgument(
