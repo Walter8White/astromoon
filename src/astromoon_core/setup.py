@@ -38,6 +38,7 @@ setup(
     'console_scripts': [
         'odom_tf_broadcaster = astromoon_core.odom_tf_broadcaster:main',
         'map_to_odom_broadcaster = astromoon_core.map_to_odom_broadcaster:main',
+        'cmd_vel_mux = astromoon_core.cmd_vel_mux:main',
     ],
 },
 )

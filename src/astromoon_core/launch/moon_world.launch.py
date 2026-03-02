@@ -1,7 +1,8 @@
 # launch/fortress_spawn.launch.py
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, TimerAction, SetEnvironmentVariable, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, TimerAction, SetEnvironmentVariable, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import PathJoinSubstitution
@@ -10,6 +11,7 @@ import os, xacro, tempfile
 
 
 def generate_launch_description():
+    mode = LaunchConfiguration("mode")
     pkg = get_package_share_directory("astromoon_core")
     world = os.path.join(pkg, "worlds", "world.sdf")
 
@@ -58,7 +60,17 @@ def generate_launch_description():
             "/model/rover/cmd_vel@geometry_msgs/msg/Twist@ignition.msgs.Twist",
         ],
         remappings=[
-            ("/model/rover/cmd_vel", "/cmd_vel"),
+            ("/model/rover/cmd_vel", "/cmd_vel_muxed"),
+        ],
+    )
+
+    bridge_cmd_vel_manual = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="bridge_cmd_vel_manual",
+        output="screen",
+        arguments=[
+            "/cmd_vel_manual@geometry_msgs/msg/Twist@ignition.msgs.Twist",
         ],
     )
 
@@ -130,6 +142,14 @@ def generate_launch_description():
         launch_arguments={"use_sim_time": "true"}.items(),
     )
 
+    cmd_vel_mux = Node(
+        package="astromoon_core",
+        executable="cmd_vel_mux",
+        name="cmd_vel_mux",
+        output="screen",
+        parameters=[{"use_sim_time": True}, {"default_mode": mode}],
+    )
+
     odom_tf = Node(
         package="astromoon_core",
         executable="odom_tf_broadcaster",
@@ -157,6 +177,11 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            DeclareLaunchArgument(
+                "mode",
+                default_value="auto",
+                description="Command mode for the rover: auto or manual.",
+            ),
             env_ign,
             env_gz,
             gz,
@@ -164,9 +189,11 @@ def generate_launch_description():
             unpause,
             spawn,
             bridge_cmd_vel,
+            bridge_cmd_vel_manual,
             bridge_odom,
             bridge_world_poses,
             rover_bringup,
+            cmd_vel_mux,
             odom_tf,
             map_to_odom,
         ]

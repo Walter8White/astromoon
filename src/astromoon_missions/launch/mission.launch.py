@@ -1,16 +1,25 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression, TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
+def _validate_mode(context, *args, **kwargs):
+    mode = LaunchConfiguration("mode").perform(context).strip().lower()
+    if mode not in {"manual", "auto"}:
+        raise RuntimeError("Invalid launch argument 'mode'. Expected 'manual' or 'auto'.")
+    return []
+
+
 def generate_launch_description():
-    mission = LaunchConfiguration("mission")      
-    use_nav2 = LaunchConfiguration("use_nav2")    
-    use_rviz = LaunchConfiguration("use_rviz")    
+    mode = LaunchConfiguration("mode")
+    mission = LaunchConfiguration("mission")
+    use_rviz = LaunchConfiguration("use_rviz")
+
+    is_auto = IfCondition(PythonExpression(["'", mode, "' == 'auto'"]))
 
     mission_file = PathJoinSubstitution([
         FindPackageShare("astromoon_missions"),
@@ -26,10 +35,11 @@ def generate_launch_description():
                 "launch",
                 "moon_world.launch.py",
             ])
-        )
+        ),
+        launch_arguments={"mode": mode}.items(),
     )
 
-    # 2) Nav2 (optional)
+    # 2) Nav2 in auto mode only
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -38,19 +48,19 @@ def generate_launch_description():
                 "nav2.launch.py",
             ])
         ),
-        condition=IfCondition(use_nav2),
+        condition=is_auto,
     )
 
-    # 3) Mission nodes
-    mission_manager =  Node(
+    # 3) Mission nodes in auto mode only
+    mission_manager = Node(
         package="astromoon_missions",
         executable="mission_manager",
         name="mission_manager",
         output="screen",
         parameters=[
             {"mission_file": mission_file},
-            {"use_nav2": use_nav2},
         ],
+        condition=is_auto,
     )
 
     mission_referee = Node(
@@ -61,9 +71,10 @@ def generate_launch_description():
         parameters=[
             {"mission_file": mission_file},
         ],
+        condition=is_auto,
     )
 
-    # 4) RViz optional 
+    # 4) RViz optional in both modes
     rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -82,14 +93,15 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
+            "mode",
+            default_value="auto",
+            description="Launch mode: manual or auto.",
+        ),
+        OpaqueFunction(function=_validate_mode),
+        DeclareLaunchArgument(
             "mission",
             default_value="m1_waypoint_traverse",
-            description="Mission name (without .yaml). Example: m0_bootcamp",
-        ),
-        DeclareLaunchArgument(
-            "use_nav2",
-            default_value="false",
-            description="Launch Nav2 stack (true/false).",
+            description="Mission name (without .yaml). Used only in auto mode.",
         ),
         DeclareLaunchArgument(
             "use_rviz",
