@@ -1,85 +1,114 @@
 # astromoon_missions
 
-This package is the **main entry point** of AstroMoon.
+Main entry point of AstroMoon.
 
-It orchestrates:
+This package orchestrates:
+
 - simulation bringup
-- navigation (Nav2)
+- optional operator visualization with RViz
+- automatic navigation with Nav2
 - mission execution
 - mission evaluation
 
-## Quick start
+## Main launch file
 
 ```bash
-ros2 launch astromoon_missions mission.launch.py mission:=m1_waypoint_traverse use_nav2:=true
+ros2 launch astromoon_missions mission.launch.py
 ```
-
-## Launch file
-
-`mission.launch.py` can launch the full stack (simulation + navigation + mission nodes) depending on options.
 
 ### Arguments
 
-- `mission` (string)  
-  Mission id / YAML name (example: `m1_waypoint_traverse`)
+- `mode:=manual|auto`
+  `manual`: simulation only, no Nav2, no mission.
+  `auto`: simulation + Nav2 + mission nodes.
 
-- `use_nav2` (bool)  
-  If `true`, launches Nav2 bringup from `astromoon_nav`
+- `mission:=<mission_name>`
+  Mission YAML name without `.yaml`.
+  Used only in `auto` mode.
+  Default: `m1_waypoint_traverse`.
 
-- `use_rviz` (bool)  
-  If `true`, launches RViz (TODO)
+- `use_rviz:=true|false`
+  Launches RViz2 in either mode.
 
-- `use_sim_time` (bool)  
-  Use simulation clock (`/clock`)
+## Typical usage
 
-### What it launches (high level)
-
-When you run:
+Manual mode:
 
 ```bash
-ros2 launch astromoon_missions mission.launch.py mission:=m1_waypoint_traverse use_nav2:=true
+ros2 launch astromoon_missions mission.launch.py mode:=manual
+ros2 launch astromoon_missions mission.launch.py mode:=manual use_rviz:=true
 ```
 
-it typically launches:
+Auto mode:
 
-1. Simulation bringup (from `astromoon_core`)
-   - Gazebo world + rover spawn
-   - TF publishing (robot_state_publisher)
-   - Odometry bridge + odom->base_link TF broadcaster (for Nav2)
+```bash
+ros2 launch astromoon_missions mission.launch.py mode:=auto
+ros2 launch astromoon_missions mission.launch.py mode:=auto mission:=m1_waypoint_traverse
+ros2 launch astromoon_missions mission.launch.py mode:=auto use_rviz:=true
+```
 
-2. Navigation bringup (from `astromoon_nav`) if `use_nav2:=true`
-   - planner_server, controller_server, bt_navigator, waypoint_follower
-   - lifecycle_manager_navigation
-   - costmaps + behaviors (depending on params)
+## What each mode does
 
-3. Mission nodes (from this package)
-   - `mission_manager` (execution)
-   - `mission_referee` (validation / scoring)
+### Manual mode
 
-## Responsibilities
+Launches:
 
-- Mission launch logic
-- Mission manager (execution)
-- Mission referee (validation & scoring)
-- Mission YAML definitions
+- `astromoon_core`
+- Gazebo world and rover
+- manual command path through `/cmd_vel_manual`
+- optional RViz
 
-## Mission flow
+Does not launch:
 
-1. Launch simulation (`astromoon_core`)
-2. Launch navigation (`astromoon_nav`) (optional)
-3. Execute mission objectives (manager)
-4. Evaluate success / failure (referee)
+- Nav2
+- `mission_manager`
+- `mission_referee`
 
-## Design
+### Auto mode
 
-- Mission behavior is defined in YAML
-- The mission_manager executes objectives (e.g. Nav2 actions like FollowWaypoints)
-- The mission_referee evaluates outcomes (timeout, criteria, scoring)
+Launches:
 
-## Related package READMEs
+- `astromoon_core`
+- `astromoon_nav`
+- `mission_manager`
+- `mission_referee`
+- optional RViz
 
-- `astromoon_core`: simulation bringup details  
-  [README](../astromoon_core/README.md)
+Mission execution currently relies on Nav2 `FollowWaypoints`.
 
-- `astromoon_nav`: Nav2 parameters and bringup details  
-  [README](../astromoon_nav/README.md)
+## Mission model
+
+Mission behavior is described in YAML files under `missions/`.
+
+Current default mission:
+
+- `m1_waypoint_traverse`
+
+The mission manager:
+
+- loads a mission YAML file
+- waits for Nav2 `waypoint_follower` to become active
+- sends a `FollowWaypoints` goal
+- optionally loops the mission
+- publishes mission events on `/mission/events`
+
+The mission referee:
+
+- monitors `/odom`
+- checks waypoint completion
+- enforces a timeout
+- publishes the result on `/mission/result`
+
+## Notes
+
+- `mode` is validated at launch time and must be `manual` or `auto`.
+- In `manual` mode, the mission argument is ignored.
+- This package is the recommended entry point for demos and full-stack runs.
+
+## Related packages
+
+- `astromoon_core`
+  Simulation, Gazebo GUI, bridges, TF.
+
+- `astromoon_nav`
+  Nav2 configuration and bringup.
